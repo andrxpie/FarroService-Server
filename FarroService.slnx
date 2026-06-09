@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/Solution Items/" />
+  <Project Path="FarroService.BLL/FarroService.BLL.csproj" />
+  <Project Path="FarroService.DAL/FarroService.DAL.csproj" />
+  <Project Path="FarroService.WebAPI/FarroService.WebAPI.csproj" />
+</Solution>
