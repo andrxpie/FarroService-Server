@@ -1,5 +1,6 @@
 ﻿using FarroService.BLL.Dto.Booking;
 using FarroService.BLL.MediatR.Booking.Create;
+using FarroService.BLL.MediatR.Booking.GetAll;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,11 +21,23 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>
+    /// Retrieves all booking records registered in the system with full service and master details.
+    /// </summary>
+    /// <returns>A collection of detailed booking DTOs.</returns>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<GetBookingDto>))]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _mediator.Send(new GetAllBookingsQuery());
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Processes a request to secure a specific plumber master's appointment timeslot.
     /// </summary>
     /// <param name="dto">The parameters required for booking reservation.</param>
     /// <returns>The resulting confirmed booking profile or validation issues details.</returns>
-    [HttpPost("book")]
+    [HttpPost("create")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GetBookingDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Book([FromBody] CreateBookingDto dto)

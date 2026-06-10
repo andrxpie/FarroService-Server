@@ -58,7 +58,7 @@ public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingC
 
         var (latitude, longitude) = await _geocodingService.GetCoordinatesAsync(request.Dto.Address, cancellationToken);
 
-        var booking = new FarroService.DAL.Entities.Booking
+        var booking = new DAL.Entities.Booking
         {
             Id = Guid.NewGuid(),
             ClientName = request.Dto.ClientName,
