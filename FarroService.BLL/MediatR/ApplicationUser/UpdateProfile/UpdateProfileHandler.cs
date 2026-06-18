@@ -18,9 +18,16 @@ public class UpdateProfileHandler : IRequestHandler<UpdateProfileCommand, Update
         if (user == null)
             return new UpdateProfileResultDto(null, null, "Користувача не знайдено.");
 
-        user.FullName = request.Dto.FullName;
-        user.Email = request.Dto.Email;
-        user.UserName = request.Dto.Email;
+        // Only the head admin may change their own name/email. Masters and regular
+        // admins can change their password only — identity fields are managed by the
+        // administration, so any FullName/Email in the payload is ignored for them.
+        var isMainAdmin = await _userManager.IsInRoleAsync(user, "MainAdmin");
+        if (isMainAdmin)
+        {
+            user.FullName = request.Dto.FullName;
+            user.Email = request.Dto.Email;
+            user.UserName = request.Dto.Email;
+        }
 
         if (!string.IsNullOrEmpty(request.Dto.NewPassword))
         {
@@ -41,7 +48,7 @@ public class UpdateProfileHandler : IRequestHandler<UpdateProfileCommand, Update
                 return new UpdateProfileResultDto(null, null, message);
             }
         }
-        else
+        else if (isMainAdmin)
         {
             var updateResult = await _userManager.UpdateAsync(user);
             if (!updateResult.Succeeded)
