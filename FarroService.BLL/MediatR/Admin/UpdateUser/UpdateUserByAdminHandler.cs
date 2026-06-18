@@ -49,6 +49,16 @@ public class UpdateUserByAdminHandler : IRequestHandler<UpdateUserByAdminCommand
         }
 
         var result = await _userManager.UpdateAsync(user);
-        return result.Succeeded;
+        if (!result.Succeeded) return false;
+
+        if (!string.IsNullOrEmpty(request.Dto.Role) &&
+            (request.Dto.Role == "Master" || request.Dto.Role == "Admin"))
+        {
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            await _userManager.AddToRoleAsync(user, request.Dto.Role);
+        }
+
+        return true;
     }
 }

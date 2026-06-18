@@ -11,7 +11,7 @@ namespace FarroService.WebAPI.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "MainAdmin")]
+[Authorize(Roles = "Admin,MainAdmin")]
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -25,11 +25,13 @@ public class AdminController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<GetAdminUserDto>))]
     public async Task<IActionResult> GetUsers([FromQuery] string? role = null)
     {
-        var result = await _mediator.Send(new GetAdminUsersQuery(role));
+        var effectiveRole = User.IsInRole("MainAdmin") ? role : "Master";
+        var result = await _mediator.Send(new GetAdminUsersQuery(effectiveRole));
         return Ok(result);
     }
 
     [HttpPost("users")]
+    [Authorize(Roles = "MainAdmin")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RegisterUser([FromBody] RegisterUserByAdminDto dto)
@@ -43,9 +45,18 @@ public class AdminController : ControllerBase
 
     [HttpPut("users/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserByAdminDto dto)
     {
+        if (!User.IsInRole("MainAdmin"))
+        {
+            var masters = await _mediator.Send(new GetAdminUsersQuery("Master"));
+            if (!masters.Any(u => u.Id == id))
+                return Forbid();
+            dto = dto with { Role = null };
+        }
+
         var result = await _mediator.Send(new UpdateUserByAdminCommand(id, dto));
         if (!result)
             return NotFound(new { message = "User not found." });
@@ -54,6 +65,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("users/{id:guid}")]
+    [Authorize(Roles = "MainAdmin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteUser(Guid id)

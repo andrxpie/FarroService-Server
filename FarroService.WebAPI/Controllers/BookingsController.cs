@@ -2,6 +2,7 @@ using FarroService.BLL.Dto.Booking;
 using FarroService.BLL.MediatR.Booking.Create;
 using FarroService.BLL.MediatR.Booking.GetAll;
 using FarroService.BLL.MediatR.Booking.GetByMaster;
+using FarroService.BLL.MediatR.Booking.UpdateStatus;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,27 @@ public class BookingsController : ControllerBase
 
         var result = await _mediator.Send(new GetBookingsByMasterQuery(masterId));
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Updates the status of a booking. Accessible by Admin, MainAdmin, and Master.
+    /// </summary>
+    [HttpPut("{id:guid}/status")]
+    [Authorize(Roles = "Admin,MainAdmin,Master")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateBookingStatusDto dto)
+    {
+        try
+        {
+            var found = await _mediator.Send(new UpdateStatusBookingCommand(id, dto.Status));
+            return found ? NoContent() : NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>

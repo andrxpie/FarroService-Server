@@ -6,4 +6,4 @@ namespace FarroService.BLL.MediatR.Service.GetServices;
 /// <summary>
 /// MediatR query to retrieve the list of active services available in the system catalog.
 /// </summary>
-public record GetServicesServiceQuery() : IRequest<IEnumerable<GetServiceDto>>;
+public record GetServicesServiceQuery(bool IncludeAll = false) : IRequest<IEnumerable<GetServiceDto>>;

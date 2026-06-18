@@ -16,8 +16,11 @@ public class GetServicesServiceHandler : IRequestHandler<GetServicesServiceQuery
 
     public async Task<IEnumerable<GetServiceDto>> Handle(GetServicesServiceQuery request, CancellationToken cancellationToken)
     {
-        var services = await _repository.Service
-            .FindByCondition(s => s.IsActive)
+        var query = request.IncludeAll
+            ? _repository.Service.FindAll()
+            : _repository.Service.FindByCondition(s => s.IsActive);
+
+        var services = await query
             .Include(s => s.Specialization)
             .ToListAsync(cancellationToken);
 
