@@ -3,6 +3,7 @@ using FarroService.BLL.MediatR.Booking.Create;
 using FarroService.BLL.MediatR.Booking.GetAll;
 using FarroService.BLL.MediatR.Booking.GetByMaster;
 using FarroService.BLL.MediatR.Booking.Delete;
+using FarroService.BLL.MediatR.Booking.Update;
 using FarroService.BLL.MediatR.Booking.UpdateStatus;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -72,6 +73,31 @@ public class BookingsController : ControllerBase
             return found ? NoContent() : NotFound();
         }
         catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Updates all editable fields of a booking. Accessible by Admin and MainAdmin only.
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,MainAdmin")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GetBookingDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateBookingDto dto)
+    {
+        try
+        {
+            var result = await _mediator.Send(new UpdateBookingCommand(id, dto));
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
