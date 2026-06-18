@@ -8,6 +8,10 @@ namespace FarroService.BLL.MediatR.Admin.GetUsers;
 
 public class GetAdminUsersHandler : IRequestHandler<GetAdminUsersQuery, IEnumerable<GetAdminUserDto>>
 {
+    // Roles ordered by priority (highest first). Used both as the default set of
+    // roles to list and to resolve a user's primary role when they hold several.
+    private static readonly string[] RolePriority = { "MainAdmin", "Admin", "Master" };
+
     private readonly UserManager<DAL.Entities.ApplicationUser> _userManager;
     private readonly IRepositoryWrapper _repository;
 
@@ -22,35 +26,34 @@ public class GetAdminUsersHandler : IRequestHandler<GetAdminUsersQuery, IEnumera
     public async Task<IEnumerable<GetAdminUserDto>> Handle(GetAdminUsersQuery request, CancellationToken cancellationToken)
     {
         var rolesToQuery = string.IsNullOrEmpty(request.Role)
-            ? new[] { "Master", "Admin" }
+            ? RolePriority
             : new[] { request.Role };
 
-        var userIds = new HashSet<Guid>();
+        // Build a userId -> role map while iterating roles in priority order, so we
+        // already know each user's primary role and avoid a per-user GetRolesAsync (N+1).
+        // TryAdd keeps the first (highest-priority) role for users holding several.
+        var primaryRoleByUserId = new Dictionary<Guid, string>();
         foreach (var role in rolesToQuery)
         {
             var usersInRole = await _userManager.GetUsersInRoleAsync(role);
-            foreach (var u in usersInRole) userIds.Add(u.Id);
+            foreach (var u in usersInRole)
+                primaryRoleByUserId.TryAdd(u.Id, role);
         }
 
+        var userIds = primaryRoleByUserId.Keys.ToList();
         var users = await _repository.ApplicationUser
             .FindByCondition(u => userIds.Contains(u.Id))
             .Include(u => u.Specializations)
             .ToListAsync(cancellationToken);
 
-        var result = new List<GetAdminUserDto>();
-        foreach (var user in users)
-        {
-            var roles = await _userManager.GetRolesAsync(user);
-            var primaryRole = roles.FirstOrDefault() ?? string.Empty;
-            result.Add(new GetAdminUserDto(
-                user.Id,
-                user.FullName,
-                user.Email ?? string.Empty,
-                primaryRole,
-                user.Specializations.Select(s => new SpecializationDto(s.Id, s.Name)),
-                user.CreatedAt
-            ));
-        }
+        var result = users.Select(user => new GetAdminUserDto(
+            user.Id,
+            user.FullName,
+            user.Email ?? string.Empty,
+            primaryRoleByUserId.GetValueOrDefault(user.Id, string.Empty),
+            user.Specializations.Select(s => new SpecializationDto(s.Id, s.Name)),
+            user.CreatedAt
+        ));
 
         return result.OrderBy(u => u.FullName);
     }
