@@ -22,7 +22,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddDatabaseContext(builder.Configuration);
 builder.Services.AddRepositoryWrapper();
 builder.Services.AddIdentityServices();
-builder.Services.AddExternalServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(BllAssemblyMarker).Assembly));

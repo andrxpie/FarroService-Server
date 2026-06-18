@@ -11,6 +11,8 @@
 /// <param name="StartTime">The requested starting time of the service slot.</param>
 /// <param name="Address">The physical address where the work is scheduled to take place.</param>
 /// <param name="Comment">Optional additional notes or instructions provided by the client.</param>
+/// <param name="Latitude">Latitude coordinate pre-resolved by the client (Photon geocoding).</param>
+/// <param name="Longitude">Longitude coordinate pre-resolved by the client (Photon geocoding).</param>
 public record CreateBookingDto(
     string ClientName,
     string Phone,
@@ -19,5 +21,7 @@ public record CreateBookingDto(
     DateOnly Date,
     TimeOnly StartTime,
     string Address,
-    string? Comment
+    string? Comment,
+    string? Latitude,
+    string? Longitude
 );

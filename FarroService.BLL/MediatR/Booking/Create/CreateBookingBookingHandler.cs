@@ -1,5 +1,4 @@
 using FarroService.BLL.Dto.Booking;
-using FarroService.BLL.ExternalServices;
 using FarroService.DAL.Repositories.Interfaces.Base;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,12 +8,10 @@ namespace FarroService.BLL.MediatR.Booking.Create;
 public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingCommand, GetBookingDto?>
 {
     private readonly IRepositoryWrapper _repository;
-    private readonly IGeocodingService _geocodingService;
 
-    public CreateBookingBookingHandler(IRepositoryWrapper repository, IGeocodingService geocodingService)
+    public CreateBookingBookingHandler(IRepositoryWrapper repository)
     {
         _repository = repository;
-        _geocodingService = geocodingService;
     }
 
     public async Task<GetBookingDto?> Handle(CreateBookingBookingCommand request, CancellationToken cancellationToken)
@@ -60,8 +57,6 @@ public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingC
         if (isSlotTaken)
             throw new InvalidOperationException("The requested time slot is already booked for this master.");
 
-        var (latitude, longitude) = await _geocodingService.GetCoordinatesAsync(request.Dto.Address, cancellationToken);
-
         var booking = new DAL.Entities.Booking
         {
             Id = Guid.NewGuid(),
@@ -74,8 +69,8 @@ public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingC
             EndTime = endTimeSpan,
             Status = "Pending",
             Address = request.Dto.Address,
-            Latitude = latitude,
-            Longitude = longitude,
+            Latitude = request.Dto.Latitude,
+            Longitude = request.Dto.Longitude,
             Comment = request.Dto.Comment,
             CreatedAt = DateTime.UtcNow
         };

@@ -1,5 +1,4 @@
-﻿using FarroService.BLL.ExternalServices;
-using FarroService.DAL.Entities;
+﻿using FarroService.DAL.Entities;
 using FarroService.DAL.Persistence;
 using FarroService.DAL.Repositories.Interfaces.Base;
 using FarroService.DAL.Repositories.Realizations.Base;
@@ -49,17 +48,6 @@ public static class ServiceCollectionExtensions
         })
         .AddEntityFrameworkStores<FarroServiceDbContext>()
         .AddDefaultTokenProviders();
-    }
-
-    public static void AddExternalServices(this IServiceCollection services)
-    {
-        services.AddHttpClient<IGeocodingService, NominatimGeocodingService>(client =>
-        {
-            client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
-            client.DefaultRequestHeaders.Add("User-Agent", "FarroServiceBookingApp/1.0");
-            client.DefaultRequestHeaders.Add("Referer", "https://github.com/your-username/FarroService");
-        })
-        .AddStandardResilienceHandler();
     }
 
     public static void AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)

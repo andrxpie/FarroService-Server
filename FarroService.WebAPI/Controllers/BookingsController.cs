@@ -2,6 +2,7 @@ using FarroService.BLL.Dto.Booking;
 using FarroService.BLL.MediatR.Booking.Create;
 using FarroService.BLL.MediatR.Booking.GetAll;
 using FarroService.BLL.MediatR.Booking.GetByMaster;
+using FarroService.BLL.MediatR.Booking.Delete;
 using FarroService.BLL.MediatR.Booking.UpdateStatus;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -74,6 +75,19 @@ public class BookingsController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Permanently deletes a booking record. Accessible by Admin and MainAdmin only.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,MainAdmin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var found = await _mediator.Send(new DeleteBookingCommand(id));
+        return found ? NoContent() : NotFound();
     }
 
     /// <summary>
