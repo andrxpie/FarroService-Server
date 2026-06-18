@@ -3,6 +3,7 @@ using System;
 using FarroService.DAL.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FarroService.DAL.Migrations
 {
     [DbContext(typeof(FarroServiceDbContext))]
-    partial class FarroServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260618082754_AddSpecializationsRefactor")]
+    partial class AddSpecializationsRefactor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

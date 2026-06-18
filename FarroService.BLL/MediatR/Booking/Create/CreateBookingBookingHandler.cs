@@ -1,4 +1,4 @@
-﻿using FarroService.BLL.Dto.Booking;
+using FarroService.BLL.Dto.Booking;
 using FarroService.BLL.ExternalServices;
 using FarroService.DAL.Repositories.Interfaces.Base;
 using MediatR;
@@ -6,10 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FarroService.BLL.MediatR.Booking.Create;
 
-/// <summary>
-/// Handler executing transaction logic for CreateBookingBookingCommand.
-/// Detects scheduling conflicts, validates master/service existence, resolves geographic coordinates, and registers the booking.
-/// </summary>
 public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingCommand, GetBookingDto?>
 {
     private readonly IRepositoryWrapper _repository;
@@ -25,36 +21,44 @@ public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingC
     {
         var service = await _repository.Service
             .FindByCondition(s => s.Id == request.Dto.ServiceId)
+            .Include(s => s.Specialization)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (service == null)
-        {
             return null;
-        }
 
         var master = await _repository.ApplicationUser
             .FindByCondition(u => u.Id == request.Dto.MasterId)
+            .Include(u => u.Specializations)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (master == null)
-        {
             return null;
-        }
 
-        var endTime = request.Dto.StartTime.Add(TimeSpan.FromMinutes(service.DurationMinutes));
+        // Validate master has the required specialization for this service
+        if (!master.Specializations.Any(s => s.Id == service.SpecializationId))
+            throw new InvalidOperationException("Master is not qualified for this service.");
+
+        var startTimeSpan = request.Dto.StartTime.ToTimeSpan();
+        var endTimeSpan = startTimeSpan.Add(TimeSpan.FromMinutes(service.DurationMinutes));
+        var bookingDate = request.Dto.Date.ToDateTime(TimeOnly.MinValue).Date;
+
+        // Validate booking is within business hours 10:00–19:00
+        var businessStart = new TimeSpan(10, 0, 0);
+        var businessEnd = new TimeSpan(19, 0, 0);
+        if (startTimeSpan < businessStart || endTimeSpan > businessEnd)
+            throw new InvalidOperationException("Booking must be within business hours (10:00–19:00).");
 
         var isSlotTaken = await _repository.Booking
             .FindByCondition(b => b.MasterId == request.Dto.MasterId
-                               && b.BookingDate == request.Dto.Date.Date
+                               && b.BookingDate == bookingDate
                                && b.Status != "Cancelled"
-                               && request.Dto.StartTime < b.EndTime
-                               && endTime > b.StartTime)
+                               && startTimeSpan < b.EndTime
+                               && endTimeSpan > b.StartTime)
             .AnyAsync(cancellationToken);
 
         if (isSlotTaken)
-        {
-            throw new InvalidOperationException("The requested plumbing service time slot is already booked for this master.");
-        }
+            throw new InvalidOperationException("The requested time slot is already booked for this master.");
 
         var (latitude, longitude) = await _geocodingService.GetCoordinatesAsync(request.Dto.Address, cancellationToken);
 
@@ -65,9 +69,9 @@ public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingC
             ClientPhone = request.Dto.Phone,
             ServiceId = request.Dto.ServiceId,
             MasterId = request.Dto.MasterId,
-            BookingDate = request.Dto.Date.Date,
-            StartTime = request.Dto.StartTime,
-            EndTime = endTime,
+            BookingDate = bookingDate,
+            StartTime = startTimeSpan,
+            EndTime = endTimeSpan,
             Status = "Pending",
             Address = request.Dto.Address,
             Latitude = latitude,
@@ -87,9 +91,9 @@ public class CreateBookingBookingHandler : IRequestHandler<CreateBookingBookingC
             service.Title,
             booking.MasterId,
             master.FullName,
-            booking.BookingDate,
-            booking.StartTime,
-            booking.EndTime,
+            DateOnly.FromDateTime(booking.BookingDate),
+            TimeOnly.FromTimeSpan(booking.StartTime),
+            TimeOnly.FromTimeSpan(booking.EndTime),
             booking.Status,
             booking.Address,
             booking.Latitude,

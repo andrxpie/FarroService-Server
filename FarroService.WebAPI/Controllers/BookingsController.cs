@@ -1,13 +1,16 @@
-﻿using FarroService.BLL.Dto.Booking;
+using FarroService.BLL.Dto.Booking;
 using FarroService.BLL.MediatR.Booking.Create;
 using FarroService.BLL.MediatR.Booking.GetAll;
+using FarroService.BLL.MediatR.Booking.GetByMaster;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FarroService.WebAPI.Controllers;
 
 /// <summary>
-/// REST controller handling creation and verification of master booking slots.
+/// REST controller handling creation and retrieval of booking slots.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -21,10 +24,10 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves all booking records registered in the system with full service and master details.
+    /// Retrieves all booking records. Accessible by Admin only.
     /// </summary>
-    /// <returns>A collection of detailed booking DTOs.</returns>
     [HttpGet]
+    [Authorize(Roles = "Admin,MainAdmin")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<GetBookingDto>))]
     public async Task<IActionResult> GetAll()
     {
@@ -33,11 +36,29 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>
-    /// Processes a request to secure a specific plumber master's appointment timeslot.
+    /// Retrieves bookings assigned to the currently authenticated master.
     /// </summary>
-    /// <param name="dto">The parameters required for booking reservation.</param>
-    /// <returns>The resulting confirmed booking profile or validation issues details.</returns>
-    [HttpPost("create")]
+    [HttpGet("my")]
+    [Authorize(Roles = "Master")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<GetBookingDto>))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMy()
+    {
+        var masterIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(masterIdClaim, out var masterId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new GetBookingsByMasterQuery(masterId));
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Creates a new booking. Public endpoint — no authentication required.
+    /// </summary>
+    [HttpPost("book")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GetBookingDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Book([FromBody] CreateBookingDto dto)

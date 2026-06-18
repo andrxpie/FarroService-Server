@@ -1,13 +1,11 @@
-﻿using FarroService.DAL.Repositories.Interfaces.Base;
+using FarroService.BLL.Dto.Schedule;
+using FarroService.DAL.Repositories.Interfaces.Base;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FarroService.BLL.MediatR.Schedule.GetAvailableSlots;
 
-/// <summary>
-/// Handler calculating free timeslots based on the master's working hours schedule and booked appointments.
-/// </summary>
-public class GetAvailableSlotsScheduleHandler : IRequestHandler<GetAvailableSlotsScheduleQuery, IEnumerable<string>>
+public class GetAvailableSlotsScheduleHandler : IRequestHandler<GetAvailableSlotsScheduleQuery, IEnumerable<GetSlotDto>>
 {
     private readonly IRepositoryWrapper _repository;
 
@@ -16,7 +14,7 @@ public class GetAvailableSlotsScheduleHandler : IRequestHandler<GetAvailableSlot
         _repository = repository;
     }
 
-    public async Task<IEnumerable<string>> Handle(GetAvailableSlotsScheduleQuery request, CancellationToken cancellationToken)
+    public async Task<IEnumerable<GetSlotDto>> Handle(GetAvailableSlotsScheduleQuery request, CancellationToken cancellationToken)
     {
         var service = await _repository.Service
             .FindByCondition(s => s.Id == request.ServiceId)
@@ -29,9 +27,7 @@ public class GetAvailableSlotsScheduleHandler : IRequestHandler<GetAvailableSlot
             .FirstOrDefaultAsync(cancellationToken);
 
         if (service == null || schedule == null)
-        {
-            return Enumerable.Empty<string>();
-        }
+            return Enumerable.Empty<GetSlotDto>();
 
         var activeBookings = await _repository.Booking
             .FindByCondition(b => b.MasterId == request.MasterId
@@ -40,24 +36,19 @@ public class GetAvailableSlotsScheduleHandler : IRequestHandler<GetAvailableSlot
             .Select(b => new { b.StartTime, b.EndTime })
             .ToListAsync(cancellationToken);
 
-        var availableSlots = new List<string>();
-        var currentSlot = schedule.StartTime;
+        var slots = new List<GetSlotDto>();
         var serviceDuration = TimeSpan.FromMinutes(service.DurationMinutes);
+        var current = schedule.StartTime;
 
-        while (currentSlot + serviceDuration <= schedule.EndTime)
+        while (current + serviceDuration <= schedule.EndTime)
         {
-            var potentialEnd = currentSlot + serviceDuration;
+            var end = current + serviceDuration;
+            var isOverlapping = activeBookings.Any(b => current < b.EndTime && end > b.StartTime);
 
-            var isOverlapping = activeBookings.Any(b => currentSlot < b.EndTime && potentialEnd > b.StartTime);
-
-            if (!isOverlapping)
-            {
-                availableSlots.Add(currentSlot.ToString(@"hh\:mm"));
-            }
-
-            currentSlot = currentSlot.Add(TimeSpan.FromMinutes(30));
+            slots.Add(new GetSlotDto(TimeOnly.FromTimeSpan(current), !isOverlapping));
+            current = current.Add(TimeSpan.FromMinutes(30));
         }
 
-        return availableSlots;
+        return slots;
     }
 }

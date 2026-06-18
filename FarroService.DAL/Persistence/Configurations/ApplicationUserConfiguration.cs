@@ -15,9 +15,6 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .IsRequired()
             .HasMaxLength(150);
 
-        builder.Property(u => u.MasterSpecialization)
-            .HasMaxLength(250);
-
         builder.Property(u => u.CreatedAt)
             .IsRequired();
     }

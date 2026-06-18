@@ -20,6 +20,9 @@ public static class ServiceCollectionExtensions
 {
     public static void AddDatabaseContext(this IServiceCollection services, IConfiguration configuration)
     {
+        // Allow DateTime with Kind=Unspecified in EF Core queries against Postgres timestamp with time zone
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))
             throw new InvalidOperationException("Connection string 'DefaultConnection' not found in User Secrets.");
@@ -75,6 +78,7 @@ public static class ServiceCollectionExtensions
         })
         .AddJwtBearer(options =>
         {
+            options.MapInboundClaims = true;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,

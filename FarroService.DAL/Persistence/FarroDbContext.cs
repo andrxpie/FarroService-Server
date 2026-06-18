@@ -19,6 +19,7 @@ public class FarroServiceDbContext : IdentityDbContext<ApplicationUser, Identity
     public DbSet<Service> Services => Set<Service>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<Schedule> Schedules => Set<Schedule>();
+    public DbSet<Specialization> Specializations => Set<Specialization>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

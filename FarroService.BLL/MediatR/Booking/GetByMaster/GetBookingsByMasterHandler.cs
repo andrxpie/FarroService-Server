@@ -1,32 +1,32 @@
-﻿using FarroService.BLL.Dto.Booking;
+using FarroService.BLL.Dto.Booking;
 using FarroService.DAL.Repositories.Interfaces.Base;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace FarroService.BLL.MediatR.Booking.GetAll;
+namespace FarroService.BLL.MediatR.Booking.GetByMaster;
 
 /// <summary>
-/// Handler responsible for retrieving all bookings, loading navigation properties, and mapping them to DTOs.
+/// Handler returning all bookings assigned to a specific master, ordered by date descending.
 /// </summary>
-public class GetAllBookingsHandler : IRequestHandler<GetAllBookingsQuery, IEnumerable<GetBookingDto>>
+public class GetBookingsByMasterHandler : IRequestHandler<GetBookingsByMasterQuery, IEnumerable<GetBookingDto>>
 {
     private readonly IRepositoryWrapper _repository;
 
-    public GetAllBookingsHandler(IRepositoryWrapper repository)
+    public GetBookingsByMasterHandler(IRepositoryWrapper repository)
     {
         _repository = repository;
     }
 
-    public async Task<IEnumerable<GetBookingDto>> Handle(GetAllBookingsQuery request, CancellationToken cancellationToken)
+    public async Task<IEnumerable<GetBookingDto>> Handle(GetBookingsByMasterQuery request, CancellationToken cancellationToken)
     {
-        // Fetch all bookings with eager loading for Service and Master profiles
-        var bookings = await _repository.Booking.FindAll()
+        var bookings = await _repository.Booking
+            .FindByCondition(b => b.MasterId == request.MasterId)
             .Include(b => b.Service)
             .Include(b => b.Master)
-            .OrderByDescending(b => b.CreatedAt)
+            .OrderByDescending(b => b.BookingDate)
+            .ThenBy(b => b.StartTime)
             .ToListAsync(cancellationToken);
 
-        // Map domain database entities to secure presentation DTO models
         return bookings.Select(b => new GetBookingDto(
             b.Id,
             b.ClientName,

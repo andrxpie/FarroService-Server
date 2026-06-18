@@ -16,8 +16,8 @@ public record CreateBookingDto(
     string Phone,
     Guid ServiceId,
     Guid MasterId,
-    DateTime Date,
-    TimeSpan StartTime,
+    DateOnly Date,
+    TimeOnly StartTime,
     string Address,
     string? Comment
 );

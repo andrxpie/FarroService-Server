@@ -15,6 +15,7 @@ public class RepositoryWrapper : IRepositoryWrapper
     private IScheduleRepository? _schedule;
     private IServiceRepository? _service;
     private IApplicationUserRepository? _applicationUser;
+    private ISpecializationRepository? _specialization;
 
     public RepositoryWrapper(FarroServiceDbContext repoContext)
     {
@@ -54,6 +55,15 @@ public class RepositoryWrapper : IRepositoryWrapper
         {
             _applicationUser ??= new ApplicationUserRepository(_repoContext);
             return _applicationUser;
+        }
+    }
+
+    public ISpecializationRepository Specialization
+    {
+        get
+        {
+            _specialization ??= new SpecializationRepository(_repoContext);
+            return _specialization;
         }
     }
 

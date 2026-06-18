@@ -25,5 +25,10 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.Price)
             .HasPrecision(18, 2)
             .IsRequired();
+
+        builder.HasOne(s => s.Specialization)
+            .WithMany(sp => sp.Services)
+            .HasForeignKey(s => s.SpecializationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
