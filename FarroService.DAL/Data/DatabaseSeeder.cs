@@ -11,6 +11,7 @@ public static class DatabaseSeeder
     // Deterministic Ids keep the seeder idempotent — re-running adds only missing rows.
     private static Guid SpecId(int n) => new($"11111111-0000-0000-0000-{n:D12}");
     private static Guid ServiceId(int n) => new($"22222222-0000-0000-0000-{n:D12}");
+    private static Guid BookingId(int n) => new($"33333333-0000-0000-0000-{n:D12}");
 
     public static async Task SeedAsync(IServiceProvider serviceProvider)
     {
@@ -220,6 +221,7 @@ public static class DatabaseSeeder
         };
 
         var masterIds = new List<Guid>();
+        var masterIdByEmail = new Dictionary<string, Guid>();
         foreach (var m in mastersData)
         {
             var existing = await userManager.FindByEmailAsync(m.Email);
@@ -244,6 +246,7 @@ public static class DatabaseSeeder
             if (existing != null)
             {
                 masterIds.Add(existing.Id);
+                masterIdByEmail[m.Email] = existing.Id;
 
                 // Attach specializations via tracked DbContext
                 var trackedMaster = await context.Users
@@ -286,5 +289,94 @@ public static class DatabaseSeeder
         }
         if (addedSchedule)
             await context.SaveChangesAsync();
+
+        // 8. Bookings (add-if-missing by Id) — demo data spread across past/current/next week.
+        // Dates anchor to the Monday of the current week so the dashboard always shows
+        // realistic completed/upcoming records. Every booking uses a master who actually
+        // holds the service's specialization, no master is double-booked on a given day,
+        // and all slots fit the 10:00–19:00 working window.
+        var serviceById = services.ToDictionary(s => s.Id, s => s);
+
+        var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Unspecified);
+        var thisMonday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+
+        // (N, ServiceNum, MasterEmail, DayOffsetFromMonday, StartHour, StartMinute, Status, Client, Phone, Address)
+        var bookingsData = new[]
+        {
+            // ── Past (week -2 / -1): Completed & Cancelled ─────────────────────────────
+            (1,  1,  "koval@farro.ua",      -14, 10, 0, "Completed", "Олена Гриценко",      "+380671112233", "м. Київ, вул. Хрещатик, 12, кв. 5"),
+            (2,  7,  "koval@farro.ua",      -14, 12, 0, "Completed", "Ігор Левченко",       "+380672223344", "м. Київ, вул. Велика Васильківська, 45"),
+            (3,  12, "shev@farro.ua",       -13, 10, 0, "Completed", "Тетяна Корнієнко",    "+380633334455", "м. Київ, просп. Перемоги, 30, кв. 88"),
+            (4,  16, "shev@farro.ua",       -13, 14, 0, "Completed", "Богдан Сахно",        "+380634445566", "м. Київ, вул. Антоновича, 100"),
+            (5,  19, "bond@farro.ua",       -12, 10, 0, "Completed", "Людмила Гнатюк",      "+380505556677", "м. Київ, вул. Січових Стрільців, 7"),
+            (6,  23, "marchenko@farro.ua",  -12, 11, 0, "Completed", "Андрій Музика",       "+380506667788", "м. Київ, вул. Лютеранська, 21, кв. 14"),
+            (7,  27, "melnyk@farro.ua",     -11, 10, 0, "Completed", "Вікторія Романюк",    "+380677778899", "м. Київ, вул. Саксаганського, 56"),
+            (8,  31, "kravch@farro.ua",     -11, 10, 0, "Completed", "Сергій Білоус",       "+380678889900", "м. Київ, вул. Володимирська, 78, кв. 3"),
+            (9,  35, "oliynyk@farro.ua",    -10, 15, 0, "Completed", "Марина Ткачук",       "+380639990011", "м. Київ, вул. Олеся Гончара, 19"),
+            (10, 39, "lysenko@farro.ua",    -10, 10, 0, "Completed", "Павло Косенко",       "+380501011122", "м. Київ, вул. Дмитрівська, 62, кв. 41"),
+            (11, 43, "moroz@farro.ua",       -7, 10, 0, "Completed", "Ніна Шевчук",         "+380672122233", "с. Софіївська Борщагівка, вул. Садова, 4"),
+            (12, 47, "sydorenko@farro.ua",   -7, 10, 0, "Completed", "Дмитро Кравець",      "+380633233344", "м. Київ, вул. Жилянська, 90, кв. 12"),
+            (13, 2,  "petro@farro.ua",       -6, 10, 0, "Cancelled", "Аліна Бондар",        "+380504344455", "м. Київ, вул. Пушкінська, 5, кв. 9"),
+            (14, 11, "rudenko@farro.ua",     -6, 11, 0, "Completed", "Олег Дорошенко",      "+380675455566", "м. Київ, вул. Лесі Українки, 24"),
+            (15, 8,  "savchenko@farro.ua",   -5, 13, 0, "Completed", "Катерина Лагода",     "+380636566677", "м. Київ, просп. Науки, 15, кв. 77"),
+            (16, 15, "zhuk@farro.ua",        -4, 10, 0, "Cancelled", "Роман Іванчук",       "+380507677788", "м. Київ, вул. Героїв Дніпра, 38"),
+            (17, 4,  "koval@farro.ua",       -3, 10, 0, "Completed", "Світлана Мороз",      "+380678788899", "м. Київ, вул. Ярославів Вал, 14, кв. 6"),
+            (18, 20, "marchenko@farro.ua",   -3, 12, 0, "Completed", "Володимир Кулик",     "+380639899900", "м. Київ, вул. Богдана Хмельницького, 51"),
+
+            // ── Current week: Confirmed & Pending ──────────────────────────────────────
+            (19, 3,  "melnyk@farro.ua",       0, 10, 0, "Confirmed", "Юлія Панасенко",      "+380501920011", "м. Київ, вул. Тарасівська, 8, кв. 2"),
+            (20, 24, "tarasenko@farro.ua",    0, 11, 0, "Confirmed", "Микола Зінченко",     "+380672031122", "м. Київ, вул. Глибочицька, 17"),
+            (21, 13, "boyko@farro.ua",        1, 10, 0, "Pending",   "Галина Савчук",       "+380633142233", "с. Петропавлівська Борщагівка, вул. Лісова, 11"),
+            (22, 32, "kravch@farro.ua",       1, 14, 0, "Pending",   "Артур Гаврилюк",      "+380504253344", "м. Київ, просп. Бажана, 26, кв. 130"),
+            (23, 6,  "didenko@farro.ua",      2, 10, 0, "Confirmed", "Оксана Литвин",       "+380675364455", "м. Київ, вул. Драгоманова, 40, кв. 58"),
+            (24, 28, "polishchuk@farro.ua",   2, 13, 0, "Pending",   "Денис Гончар",        "+380636475566", "м. Київ, вул. Урлівська, 9"),
+            (25, 17, "tkach@farro.ua",        3, 10, 0, "Pending",   "Наталія Веремій",     "+380507586677", "м. Київ, вул. Ревуцького, 13, кв. 22"),
+            (26, 36, "rudenko@farro.ua",      3, 12, 0, "Pending",   "Степан Гордієнко",    "+380678697788", "м. Київ, вул. Вишгородська, 54"),
+
+            // ── Next week: Confirmed & Pending ─────────────────────────────────────────
+            (27, 44, "boyko@farro.ua",        7, 11, 0, "Confirmed", "Лариса Пилипенко",    "+380639708899", "м. Київ, вул. Закревського, 81, кв. 15"),
+            (28, 48, "didenko@farro.ua",      7, 10, 0, "Confirmed", "Валентин Шульга",     "+380501819900", "м. Київ, вул. Метробудівська, 7"),
+            (29, 40, "savchenko@farro.ua",    8, 10, 0, "Confirmed", "Інна Мельниченко",    "+380672930011", "м. Київ, вул. Княжий Затон, 21, кв. 47"),
+            (30, 25, "marchenko@farro.ua",    8, 15, 0, "Pending",   "Юрій Доценко",        "+380633041122", "м. Київ, вул. Срібнокільська, 3")
+        };
+
+        var existingBookingIds = await context.Bookings.Select(b => b.Id).ToListAsync();
+        var bookingsToAdd = new List<Booking>();
+        foreach (var b in bookingsData)
+        {
+            var id = BookingId(b.Item1);
+            if (existingBookingIds.Contains(id))
+                continue;
+
+            var serviceId = ServiceId(b.Item2);
+            if (!serviceById.TryGetValue(serviceId, out var service))
+                continue;
+            if (!masterIdByEmail.TryGetValue(b.Item3, out var masterId))
+                continue;
+
+            var start = new TimeSpan(b.Item5, b.Item6, 0);
+            var end = start + TimeSpan.FromMinutes(service.DurationMinutes);
+            var bookingDate = thisMonday.AddDays(b.Item4);
+
+            bookingsToAdd.Add(new Booking
+            {
+                Id = id,
+                ClientName = b.Item8,
+                ClientPhone = b.Item9,
+                ServiceId = serviceId,
+                MasterId = masterId,
+                BookingDate = bookingDate,
+                StartTime = start,
+                EndTime = end,
+                Status = b.Item7,
+                Address = b.Item10,
+                CreatedAt = DateTime.SpecifyKind(bookingDate.AddDays(-2), DateTimeKind.Utc)
+            });
+        }
+        if (bookingsToAdd.Count > 0)
+        {
+            context.Bookings.AddRange(bookingsToAdd);
+            await context.SaveChangesAsync();
+        }
     }
 }
