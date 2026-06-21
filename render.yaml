@@ -1,0 +1,24 @@
+# render.yaml — Render.com Blueprint for the FarroService backend
+# Docs: https://render.com/docs/blueprint-spec
+# Free plan: no credit card required. Note: the service spins down after ~15 min
+# of inactivity and the next request incurs a ~30-50s cold start.
+
+services:
+  - type: web
+    name: farro-service-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: frankfurt        # closest free region to Ukraine
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true         # redeploy on every push to the connected branch
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Render injects PORT automatically; Program.cs already binds to it.
+      # Secret values are entered in the Render dashboard (never stored in git):
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: JwtSettings__Secret
+        sync: false

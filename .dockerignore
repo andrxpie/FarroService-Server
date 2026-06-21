@@ -1,0 +1,20 @@
+# Build artifacts
+**/bin/
+**/obj/
+**/out/
+
+# VCS / CI
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Local-only configuration & secrets (never ship these into the image)
+**/appsettings.Development.json
+**/*.user
+**/secrets.json
+
+# Docker / docs
+Dockerfile
+.dockerignore
+README.md
