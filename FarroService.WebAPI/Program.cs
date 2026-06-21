@@ -21,6 +21,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddDatabaseContext(builder.Configuration);
 builder.Services.AddRepositoryWrapper();
+builder.Services.AddApplicationServices();
 builder.Services.AddIdentityServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 

@@ -1,4 +1,5 @@
-﻿using FarroService.DAL.Entities;
+﻿using FarroService.BLL.Services;
+using FarroService.DAL.Entities;
 using FarroService.DAL.Persistence;
 using FarroService.DAL.Repositories.Interfaces.Base;
 using FarroService.DAL.Repositories.Realizations.Base;
@@ -34,6 +35,11 @@ public static class ServiceCollectionExtensions
     public static void AddRepositoryWrapper(this IServiceCollection services)
     {
         services.AddScoped<IRepositoryWrapper, RepositoryWrapper>();
+    }
+
+    public static void AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddScoped<IMasterMatchingService, MasterMatchingService>();
     }
 
     public static void AddIdentityServices(this IServiceCollection services)

@@ -36,19 +36,12 @@ public class GetAvailableSlotsScheduleHandler : IRequestHandler<GetAvailableSlot
             .Select(b => new { b.StartTime, b.EndTime })
             .ToListAsync(cancellationToken);
 
-        var slots = new List<GetSlotDto>();
         var serviceDuration = TimeSpan.FromMinutes(service.DurationMinutes);
-        var current = schedule.StartTime;
 
-        while (current + serviceDuration <= schedule.EndTime)
-        {
-            var end = current + serviceDuration;
-            var isOverlapping = activeBookings.Any(b => current < b.EndTime && end > b.StartTime);
-
-            slots.Add(new GetSlotDto(TimeOnly.FromTimeSpan(current), !isOverlapping));
-            current = current.Add(TimeSpan.FromMinutes(30));
-        }
-
-        return slots;
+        return SlotGenerator.Generate(
+            schedule.StartTime,
+            schedule.EndTime,
+            serviceDuration,
+            activeBookings.Select(b => (b.StartTime, b.EndTime)));
     }
 }

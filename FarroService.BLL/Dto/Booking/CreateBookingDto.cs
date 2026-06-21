@@ -6,7 +6,7 @@
 /// <param name="ClientName">The name of the client requesting the appointment.</param>
 /// <param name="Phone">The primary contact phone number of the client.</param>
 /// <param name="ServiceId">The unique identifier of the requested plumbing service.</param>
-/// <param name="MasterId">The unique identifier of the assigned plumbing master.</param>
+/// <param name="MasterId">The chosen master, or null to let the system assign the first free qualified master ("any master" mode).</param>
 /// <param name="Date">The requested date for the service appointment.</param>
 /// <param name="StartTime">The requested starting time of the service slot.</param>
 /// <param name="Address">The physical address where the work is scheduled to take place.</param>
@@ -17,7 +17,7 @@ public record CreateBookingDto(
     string ClientName,
     string Phone,
     Guid ServiceId,
-    Guid MasterId,
+    Guid? MasterId,
     DateOnly Date,
     TimeOnly StartTime,
     string Address,

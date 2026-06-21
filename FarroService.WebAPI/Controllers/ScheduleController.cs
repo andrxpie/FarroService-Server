@@ -1,5 +1,6 @@
 using FarroService.BLL.Dto.Schedule;
 using FarroService.BLL.MediatR.Schedule.GetAvailableSlots;
+using FarroService.BLL.MediatR.Schedule.GetAvailableSlotsAnyMaster;
 using FarroService.BLL.MediatR.Schedule.GetMasterSchedule;
 using FarroService.BLL.MediatR.Schedule.UpdateMasterSchedule;
 using MediatR;
@@ -24,6 +25,17 @@ public class ScheduleController : ControllerBase
     public async Task<IActionResult> GetSlots([FromQuery] Guid masterId, [FromQuery] Guid serviceId, [FromQuery] DateTime date)
     {
         var slots = await _mediator.Send(new GetAvailableSlotsScheduleQuery(masterId, serviceId, date));
+        return Ok(slots);
+    }
+
+    /// <summary>
+    /// "Any free master" mode — merged availability of every qualified master for a service on a date.
+    /// </summary>
+    [HttpGet("slots/any")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<GetAnyMasterSlotDto>))]
+    public async Task<IActionResult> GetAnyMasterSlots([FromQuery] Guid serviceId, [FromQuery] DateTime date)
+    {
+        var slots = await _mediator.Send(new GetAvailableSlotsAnyMasterQuery(serviceId, date));
         return Ok(slots);
     }
 
